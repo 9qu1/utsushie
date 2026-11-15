@@ -1,15 +1,15 @@
 // ウツシエ: 画面
 //   画面は「いまの state（サーバーから届く）」をそのまま描く。描きかけのキャンバスだけは手元で持つ
 //   書きかけ・押しかけを消さないよう、中身が変わったときだけ作り直す（毎回 innerHTML しない）
-import { NET, VERSION } from './net.js?v=0.4.0';
-import { Pad, SIZES, INK_MAX } from './pad.js?v=0.4.0';
-import { PALETTE, makeModel, renderModel, modelName } from './shared/models.js?v=0.4.0';
+import { NET, VERSION } from './net.js?v=0.4.1';
+import { Pad, SIZES, INK_MAX } from './pad.js?v=0.4.1';
+import { PALETTE, makeModel, renderModel, modelName } from './shared/models.js?v=0.4.1';
 import {
   RULES, ruleOf, compatible, MAX_PICK, MAX_PLAYERS, TIME_MIN, TIME_MAX, TIME_STEP, TIME_MARKS, cleanSec, fmtSec, MATCH_CHOICES, KINDS, PICKS, MIN_PLAYERS,
   maxJudges, clampJudges, PEEK_SEC, GLANCE_TIMES, GLANCE_MS, MOVES_MAX,
-} from './shared/rules.js?v=0.4.0';
-import { sfx, isMute, setMute } from './sound.js?v=0.4.0';
-import { Bots } from './bots.js?v=0.4.0';
+} from './shared/rules.js?v=0.4.1';
+import { sfx, isMute, setMute } from './sound.js?v=0.4.1';
+import { Bots } from './bots.js?v=0.4.1';
 
 const $ = (s) => document.querySelector(s);
 function el(tag, cls, text) {
@@ -318,6 +318,9 @@ function renderSettings(N) {
   const minM = S.phase === 'setup' ? S.matchNo + 1 : 1;
   for (const n of MATCH_CHOICES) mc.append(chip(`${n}試合`, S.matchCount === n, () => sock.emit('setMatches', { n }), n < minM));
   box.append(mc);
+  // 2026-11-16 ユーザー「試合の数ってどういう意味？」→ 1試合の中身を書いておく
+  const mn = N >= MIN_PLAYERS ? `お手本${N}枚` : 'お手本（人数と同じ枚数）';
+  box.append(el('div', 'calc', `1試合＝${mn}をみんなで描いて、まとめて判定して、点が入るまで。全部の試合の合計点で優勝が決まります（試合と試合のあいだに設定を変えられます）`));
 
   h('1枚を判定する人の数');
   const nn = Math.max(N, MIN_PLAYERS);
@@ -514,7 +517,7 @@ const TOOLS = [['pen', '✏️', 'ペン'], ['line', '📏', '直線'], ['fill',
     b.style.background = c.hex;
     b.title = c.name;
     b.dataset.i = i;
-    b.onclick = () => { pad.setColor(i); if (!pad.colorOk(i)) toast(pad.has('mono') ? '黒一色の試合だよ' : 'この色はもう使えないよ（2色まで）'); };
+    b.onclick = () => { pad.setColor(i); if (!pad.colorOk(i)) toast(pad.has('mono') ? 'このお題は黒一色だよ' : 'この色はもう使えないよ（2色まで）'); };
     pal.append(b);
   });
   const sz = $('#d-sizes');
@@ -645,6 +648,7 @@ function newSlot(g) {
   // ほかの1枚の控えは消す
   for (const k of ss.keys()) if (k.startsWith('us-pad:') && k !== padKey()) ss.del(k);
   pad.reset();
+  pad.resetTools(); // 前のお題の縛り（直線だけ・極太など）で変わった筆を戻してから、このお題の縛り
   pad.setRules(g.rules);
   pad.setEnabled(false);
   const saved = ss.get(padKey());

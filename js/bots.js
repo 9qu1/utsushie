@@ -4,8 +4,8 @@
 //   ・判定: 絵を小さくしてお手本と色の差をくらべ、似ている順に並べる（うまくないボットほど迷う）
 //   ・サーバーには join のときに bot: true を送る（名前の横に🤖・ホストは渡さない）
 //   ・読み込み直しても続くよう、ボットの pid と名前を sessionStorage に控える
-import { NET } from './net.js?v=0.4.0';
-import { PALETTE, makeModel, renderModel } from './shared/models.js?v=0.4.0';
+import { NET } from './net.js?v=0.4.1';
+import { PALETTE, makeModel, renderModel } from './shared/models.js?v=0.4.1';
 
 const SIZE = 480;
 const BASE_NAME = 'ボット';
