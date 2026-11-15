@@ -1,0 +1,247 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>ウツシエ｜お手本そっくりに描くお絵描きゲーム</title>
+<meta name="description" content="お手本の絵をみんなで同時にまねして描いて、似ている順にランキング。インク少なめ・直線だけ・5秒だけ見える…毎試合ちがう縛りで遊ぶオンラインお絵描きゲーム（3〜12人）。">
+<meta name="theme-color" content="#FFF4DD">
+<meta property="og:title" content="ウツシエ｜お手本そっくりに描くお絵描きゲーム">
+<meta property="og:description" content="お手本の絵をみんなで同時にまねして描いて、似ている順にランキング。インク少なめ・直線だけ・5秒だけ見える…毎試合ちがう縛りで遊ぶ（3〜12人・登録なし・無料）。">
+<meta property="og:type" content="website">
+<meta property="og:image" content="https://9qu1.com/utsushie/ogp.jpg">
+<meta property="og:url" content="https://9qu1.com/utsushie/">
+<link rel="canonical" href="https://9qu1.com/utsushie/">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="favicon-32.png" type="image/png" sizes="32x32">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@500;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css?v=0.1.0">
+</head>
+<body data-phase="top">
+
+<header id="bar">
+  <button id="b-code" class="b-code" title="招待リンクをコピー"><span class="b-lab">部屋</span><b id="b-code-num">----</b></button>
+  <div id="b-match" class="b-match"></div>
+  <div class="b-right">
+    <button id="b-sound" class="icon-btn" title="音">🔊</button>
+    <button id="b-leave" class="icon-btn" title="部屋を出る">🚪</button>
+  </div>
+</header>
+
+<main>
+  <!-- トップ -->
+  <section id="s-top">
+    <div class="logo" aria-label="ウツシエ">
+      <span class="lg l1">ウ</span><span class="lg l2">ツ</span><span class="lg l3">シ</span><span class="lg l4">エ</span>
+    </div>
+    <p class="tagline">お手本そっくりに描け！<br>みんなで同時にお絵描き → 似てる順にランキング</p>
+    <div class="card top-card">
+      <label class="f-lab" for="t-name">あなたの名前</label>
+      <input id="t-name" maxlength="10" placeholder="10文字まで" autocomplete="nickname">
+      <div id="t-invite" class="invite-note" hidden>部屋 <b id="t-invite-code"></b> に招待されています</div>
+      <button id="t-join-invite" class="btn primary big" hidden>この部屋に入る</button>
+      <button id="t-create" class="btn primary big">部屋をつくる</button>
+      <div class="or"><span>または コードで入る</span></div>
+      <div class="join-row">
+        <input id="t-code" inputmode="numeric" maxlength="4" placeholder="4けたのコード">
+        <button id="t-join" class="btn">入る</button>
+      </div>
+    </div>
+    <div class="card howto">
+      <h2>あそびかた</h2>
+      <ol>
+        <li><b>お手本の絵</b>をみんなで同時にまねして描く（1枚ずつ）</li>
+        <li>試合ごとに<b>縛り</b>がある（インク少なめ・直線だけ・5秒だけ見える…）</li>
+        <li>1枚ごとに<b>判定する人</b>がいて、その人は描かずに休けい</li>
+        <li>全部描いたら<b>まとめて判定</b>。似ている順に並べる</li>
+        <li><b>1位 3点・2位 2点・3位 1点</b>。合計がいちばん多い人が優勝！</li>
+      </ol>
+      <p class="small">3〜12人で遊べます。スマホでもパソコンでもOK。登録なし・無料。</p>
+    </div>
+    <footer class="foot"><a href="https://9qu1.com/" target="_blank" rel="noopener">くぁくぁのつくったもの（ほかのゲーム）</a></footer>
+  </section>
+
+  <!-- 待合室・試合の準備 -->
+  <section id="s-lobby">
+    <h1 id="l-title" class="s-title">メンバーを待っています</h1>
+    <div class="card invite-card" id="l-invite">
+      <div class="inv-code">部屋コード <b id="l-code">----</b></div>
+      <button id="l-copy" class="btn small">招待リンクをコピー</button>
+    </div>
+    <div class="card">
+      <div class="card-h">メンバー <span id="l-count" class="muted"></span></div>
+      <ul id="l-players" class="players"></ul>
+    </div>
+    <div class="card settings" id="l-settings"></div>
+    <div class="start-area">
+      <button id="l-start" class="btn primary big host-only">はじめる</button>
+      <div id="l-start-note" class="note"></div>
+      <button id="l-end" class="btn ghost host-only">ここで終わる（最終結果へ）</button>
+    </div>
+  </section>
+
+  <!-- 試合の前ふり -->
+  <section id="s-intro">
+    <div class="intro-no" id="i-no">第1試合</div>
+    <div class="intro-lab">この試合の縛り</div>
+    <div id="i-rules" class="intro-rules"></div>
+    <div id="i-info" class="intro-info"></div>
+    <div class="intro-bar"><div id="i-bar"></div></div>
+  </section>
+
+  <!-- 描く -->
+  <section id="s-draw" data-mode="draw">
+    <div class="draw-top">
+      <div class="d-left">
+        <span id="d-no" class="d-no">1/5枚目</span>
+        <span id="d-rules" class="rule-mini"></span>
+      </div>
+      <div id="d-prog" class="d-prog"></div>
+      <div id="d-timer" class="timer">30</div>
+    </div>
+    <div id="d-grid" class="draw-grid">
+      <div class="model-box" id="d-model-box">
+        <canvas id="d-model"></canvas>
+        <div id="d-model-cover" class="cover" hidden><span id="d-model-cover-t">👀 もう見えないよ</span></div>
+        <button id="d-glance" class="glance" hidden>🫣 チラ見</button>
+        <div class="tag">お手本</div>
+      </div>
+      <div class="canvas-box" id="d-canvas-box">
+        <canvas id="d-canvas"></canvas>
+        <canvas id="d-over"></canvas>
+        <div id="d-blind" class="cover blind" hidden><span>🙈 自分の絵は見えないよ</span></div>
+        <div id="d-count" class="count" hidden>3</div>
+        <div class="tag">あなたの絵</div>
+      </div>
+      <div class="pal-box" id="d-pal-box">
+        <div id="d-palette" class="palette"></div>
+        <div id="d-sizes" class="sizes"></div>
+      </div>
+      <div class="tool-box" id="d-tool-box">
+        <div id="d-tools" class="tools"></div>
+        <div class="tools2">
+          <button id="d-undo" class="tbtn" title="ひとつ戻す">↩️<small>戻す</small></button>
+          <button id="d-clear" class="tbtn" title="ぜんぶ消す">🗑️<small>全消し</small></button>
+        </div>
+      </div>
+      <div class="done-box" id="d-done-box">
+        <div id="d-gauge" class="gauge"></div>
+        <button id="d-done" class="btn primary">できた！</button>
+      </div>
+    </div>
+    <!-- 描いたあと・休けい・観戦 -->
+    <div id="d-side" class="d-side">
+      <div id="d-side-msg" class="side-msg"></div>
+      <div class="side-pics">
+        <figure><canvas id="d-side-model"></canvas><figcaption>お手本</figcaption></figure>
+        <figure id="d-side-mine-f"><img id="d-side-mine" alt=""><figcaption>あなたの絵</figcaption></figure>
+      </div>
+      <ul id="d-side-players" class="players mini"></ul>
+    </div>
+  </section>
+
+  <!-- 判定 -->
+  <section id="s-judge">
+    <div class="draw-top">
+      <div class="d-left"><span class="d-no">判定タイム</span><span id="j-tabs" class="j-tabs"></span></div>
+      <div id="j-prog" class="d-prog"></div>
+      <div id="j-timer" class="timer">60</div>
+    </div>
+    <div id="j-main" class="j-main">
+      <div class="j-model-box">
+        <canvas id="j-model"></canvas>
+        <div class="tag">お手本 <span id="j-model-name"></span></div>
+      </div>
+      <div class="j-right">
+        <p class="j-help">お手本に<b>似ている順</b>にタップ！（もう一度タップで取り消し・🔍で大きく）</p>
+        <div id="j-grid" class="j-grid"></div>
+        <div class="j-actions">
+          <button id="j-reset" class="btn ghost">やり直す</button>
+          <button id="j-submit" class="btn primary">この順位で決定</button>
+        </div>
+      </div>
+    </div>
+    <div id="j-wait" class="j-wait">
+      <div id="j-wait-msg" class="side-msg"></div>
+      <ul id="j-players" class="players mini"></ul>
+      <button id="j-close" class="btn ghost host-only">判定をしめきる（来ない人の分はおまかせ）</button>
+    </div>
+  </section>
+
+  <!-- 結果発表 -->
+  <section id="s-reveal">
+    <div class="draw-top">
+      <div class="d-left"><span class="d-no">結果発表</span><span id="r-no" class="muted"></span></div>
+      <div id="r-judges" class="d-prog"></div>
+    </div>
+    <div class="r-main">
+      <div class="r-model-box">
+        <canvas id="r-model"></canvas>
+        <div class="tag">お手本 <span id="r-name"></span></div>
+      </div>
+      <ol id="r-list" class="r-list"></ol>
+    </div>
+    <div class="r-nav">
+      <button id="r-prev" class="btn ghost host-only">◀ まえ</button>
+      <button id="r-next" class="btn primary host-only">つぎへ ▶</button>
+      <span id="r-wait" class="note guest-only">ホストが進めます</span>
+    </div>
+  </section>
+
+  <!-- 試合の点数 -->
+  <section id="s-score">
+    <h1 id="sc-title" class="s-title">第1試合の結果</h1>
+    <div class="card"><table id="sc-table" class="score-table"></table></div>
+    <div class="start-area">
+      <button id="sc-next" class="btn primary big host-only">次の試合へ</button>
+      <button id="sc-end" class="btn ghost host-only">ここで終わる（最終結果へ）</button>
+      <div class="note guest-only">ホストが進めます</div>
+    </div>
+  </section>
+
+  <!-- 最終結果 -->
+  <section id="s-final">
+    <h1 class="s-title">最終結果</h1>
+    <div id="f-win" class="f-win"></div>
+    <div id="f-podium" class="podium"></div>
+    <div class="card"><table id="f-table" class="score-table"></table></div>
+    <div class="start-area">
+      <button id="f-again" class="btn primary big host-only">もう一度あそぶ</button>
+      <button id="f-leave" class="btn ghost">部屋を出る</button>
+    </div>
+  </section>
+</main>
+
+<!-- 大きく見る -->
+<div id="zoom" class="overlay" hidden>
+  <div class="zoom-card">
+    <div class="zoom-pics">
+      <figure><canvas id="z-model"></canvas><figcaption>お手本</figcaption></figure>
+      <figure><img id="z-img" alt=""><figcaption id="z-cap">この絵</figcaption></figure>
+    </div>
+    <div class="zoom-actions">
+      <button id="z-prev" class="btn ghost">◀</button>
+      <button id="z-rank" class="btn primary">この絵を次の順位に</button>
+      <button id="z-next" class="btn ghost">▶</button>
+    </div>
+    <button id="z-close" class="btn ghost small">とじる</button>
+  </div>
+</div>
+
+<!-- 別の画面で開いた -->
+<div id="kicked" class="overlay" hidden>
+  <div class="card">
+    <p>この部屋を別のタブか別の端末で開きました。</p>
+    <button id="k-resume" class="btn primary">この画面で続ける</button>
+  </div>
+</div>
+
+<div id="band" class="band" hidden>📡 通信が切れました。つなぎ直し中…</div>
+<div id="toast" class="toast" hidden></div>
+
+<script type="module" src="js/app.js?v=0.1.0"></script>
+</body>
+</html>
