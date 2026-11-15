@@ -10,7 +10,24 @@
 
 export const MIN_PLAYERS = 3;
 export const MAX_PLAYERS = 12;
-export const TIME_CHOICES = [10, 15, 20, 30, 45, 60, 90];
+// 1枚の時間（秒）。目盛りで 10〜300秒を5秒きざみ（2026-11-16 ユーザー「メモリで10秒から300秒で選べるように」）
+export const TIME_MIN = 10;
+export const TIME_MAX = 300;
+export const TIME_STEP = 5;
+export const TIME_MARKS = [10, 60, 120, 180, 240, 300]; // 目盛りに書く数字
+// 受け取った秒を範囲と5秒きざみにそろえる（数字でなければ null）
+export function cleanSec(v) {
+  const n = typeof v === 'number' ? v : typeof v === 'string' && v.trim() !== '' ? Number(v) : NaN;
+  if (!Number.isFinite(n)) return null;
+  const r = Math.round(n / TIME_STEP) * TIME_STEP;
+  return Math.max(TIME_MIN, Math.min(TIME_MAX, r));
+}
+// 30 → 30秒・60 → 1分・90 → 1分30秒
+export function fmtSec(sec) {
+  const m = Math.floor(sec / 60), x = sec % 60;
+  if (!m) return `${x}秒`;
+  return x ? `${m}分${x}秒` : `${m}分`;
+}
 export const MATCH_CHOICES = [1, 2, 3, 4, 5, 6, 8, 10];
 export const KINDS = [
   { id: 'mix', name: 'ミックス' },

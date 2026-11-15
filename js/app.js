@@ -1,14 +1,14 @@
 // ウツシエ: 画面
 //   画面は「いまの state（サーバーから届く）」をそのまま描く。描きかけのキャンバスだけは手元で持つ
 //   書きかけ・押しかけを消さないよう、中身が変わったときだけ作り直す（毎回 innerHTML しない）
-import { NET, VERSION } from './net.js?v=0.1.0';
-import { Pad, SIZES, INK_MAX } from './pad.js?v=0.1.0';
-import { PALETTE, makeModel, renderModel, modelName } from './shared/models.js?v=0.1.0';
+import { NET, VERSION } from './net.js?v=0.2.0';
+import { Pad, SIZES, INK_MAX } from './pad.js?v=0.2.0';
+import { PALETTE, makeModel, renderModel, modelName } from './shared/models.js?v=0.2.0';
 import {
-  RULES, ruleOf, compatible, TIME_CHOICES, MATCH_CHOICES, KINDS, PICKS, MIN_PLAYERS,
+  RULES, ruleOf, compatible, TIME_MIN, TIME_MAX, TIME_STEP, TIME_MARKS, cleanSec, fmtSec, MATCH_CHOICES, KINDS, PICKS, MIN_PLAYERS,
   maxJudges, clampJudges, PEEK_SEC, GLANCE_TIMES, GLANCE_MS, MOVES_MAX,
-} from './shared/rules.js?v=0.1.0';
-import { sfx, isMute, setMute } from './sound.js?v=0.1.0';
+} from './shared/rules.js?v=0.2.0';
+import { sfx, isMute, setMute } from './sound.js?v=0.2.0';
 
 const $ = (s) => document.querySelector(s);
 function el(tag, cls, text) {
@@ -269,8 +269,9 @@ function renderSettings(N) {
   const box = $('#l-settings');
   const host = S.you.isHost;
   const s = S.setup;
-  const sig = JSON.stringify([s, N, host, S.matchCount, S.phase, S.matchNo]);
-  if (box.dataset.sig === sig) return;
+  // 時間は作り直しの合図に入れない（つまみを動かしている最中に作り直すと指が外れる）。値はその場で書き換える
+  const sig = JSON.stringify([{ ...s, sec: 0 }, N, host, S.matchCount, S.phase, S.matchNo]);
+  if (box.dataset.sig === sig) { syncTime(s.sec); return; }
   box.dataset.sig = sig;
   box.textContent = '';
   box.classList.toggle('ro', !host);
@@ -324,15 +325,78 @@ function renderSettings(N) {
   }
 
   h('1枚の時間');
-  const tc = el('div', 'chips');
-  for (const t of TIME_CHOICES) tc.append(chip(`${t}秒`, s.sec === t, () => setSetup({ sec: t })));
-  box.append(tc);
+  box.append(timeSlider(s, host));
 
   h('お手本の絵');
   const kc = el('div', 'chips');
   for (const k of KINDS) kc.append(chip(k.name, s.kind === k.id, () => setSetup({ kind: k.id })));
   box.append(kc);
   if (!host) box.append(el('div', 'calc', '設定を変えられるのはホスト（👑）だけです'));
+}
+
+// 1枚の時間の目盛り（10〜300秒・5秒きざみ）
+let timeDragging = false;
+function timeSlider(s, host) {
+  const wrap = el('div', 'time-box');
+  const val = el('div', 'time-val', fmtSec(s.sec));
+  val.id = 'l-time-val';
+  const row = el('div', 'time-row');
+  const minus = el('button', 'time-step', '−');
+  const plus = el('button', 'time-step', '＋');
+  minus.type = plus.type = 'button';
+  minus.title = '5秒みじかく';
+  plus.title = '5秒ながく';
+  const rng = el('input', 'time-range');
+  rng.type = 'range';
+  rng.id = 'l-time';
+  rng.min = String(TIME_MIN);
+  rng.max = String(TIME_MAX);
+  rng.step = String(TIME_STEP);
+  rng.value = String(s.sec);
+  rng.disabled = !host;
+  rng.setAttribute('aria-label', '1枚の時間');
+  const show = (v) => { val.textContent = fmtSec(v); paintRange(rng); };
+  rng.addEventListener('pointerdown', () => { timeDragging = true; });
+  rng.addEventListener('input', () => { timeDragging = true; show(Number(rng.value)); });
+  rng.addEventListener('change', () => { timeDragging = false; setSetup({ sec: Number(rng.value) }); });
+  rng.addEventListener('blur', () => { timeDragging = false; });
+  const nudge = (d) => {
+    const v = cleanSec(Number(rng.value) + d);
+    rng.value = String(v);
+    show(v);
+    setSetup({ sec: v });
+  };
+  minus.onclick = () => nudge(-TIME_STEP);
+  plus.onclick = () => nudge(TIME_STEP);
+  const track = el('div', 'time-track');
+  const marks = el('div', 'time-marks');
+  for (const m of TIME_MARKS) {
+    const t = el('span', 'time-mark', m < 60 ? `${m}秒` : `${m / 60}分`);
+    t.style.setProperty('--f', String((m - TIME_MIN) / (TIME_MAX - TIME_MIN)));
+    marks.append(t);
+  }
+  track.append(rng, marks);
+  row.append(minus, track, plus);
+  wrap.append(val, row);
+  if ((s.rules || []).includes('speed') && s.pick === 'manual') wrap.append(el('div', 'calc', '縛り「8秒勝負」の試合は 8秒になります'));
+  paintRange(rng);
+  return wrap;
+}
+// つまみより左を色でぬる
+function paintRange(rng) {
+  const f = (Number(rng.value) - TIME_MIN) / (TIME_MAX - TIME_MIN);
+  rng.style.setProperty('--fill', `${(f * 100).toFixed(1)}%`);
+}
+// サーバーから届いた時間を目盛りに出す（自分で動かしている最中は上書きしない）
+function syncTime(sec) {
+  const rng = document.getElementById('l-time');
+  if (!rng || timeDragging || document.activeElement === rng && rng.matches(':active')) return;
+  if (rng.value !== String(sec)) {
+    rng.value = String(sec);
+    paintRange(rng);
+  }
+  const val = document.getElementById('l-time-val');
+  if (val) val.textContent = fmtSec(sec);
 }
 
 $('#l-start').onclick = () => {
@@ -368,7 +432,7 @@ function renderIntro(enter) {
   }
   const info = $('#i-info');
   info.innerHTML = '';
-  info.append(`お手本 ${g.N}枚・1枚 ${g.sec}秒・1枚を判定する人 ${g.J}人`, el('br'));
+  info.append(`お手本 ${g.N}枚・1枚 ${fmtSec(g.sec)}・1枚を判定する人 ${g.J}人`, el('br'));
   info.append(S.you.inGame ? `あなたは「描く ${g.D}枚・判定 ${g.J}枚」` : '👀 観戦中（次の試合から参加できます）');
   if (enter) {
     sfx.intro();
@@ -632,7 +696,8 @@ function drawTick(now) {
   // 時計
   const t = $('#d-timer');
   const secs = started ? Math.max(0, Math.ceil(left / 1000)) : cur.sec;
-  t.textContent = String(secs);
+  // 1分以上は「4:59」の形
+  t.textContent = secs >= 60 ? `${Math.floor(secs / 60)}:${String(secs % 60).padStart(2, '0')}` : String(secs);
   const hurry = started && left > 0 && left <= 5000;
   t.classList.toggle('hurry', hurry);
   if (hurry && mode === 'draw' && cur.lastBeep !== secs && secs <= 3) { cur.lastBeep = secs; sfx.tick(); }
