@@ -48,6 +48,7 @@ export const PICKS = [
   { id: 'none', name: '縛りなし' },
   { id: 'manual', name: '自分でえらぶ（試合ずっと）' },
 ];
+export const MAX_PICK = 3;      // 「自分でえらぶ」で選べる数（2026-11-16 ユーザー「3つまで」）
 export const SPIN_MS = 3000;   // スロットが回っている時間（このあと 3・2・1）
 export const ROLL_TWO = 0.45;  // ルーレットで2個になる割合
 export const SPEED_SEC = 8;
@@ -87,12 +88,12 @@ export function compatible(a, b) {
   return !BAD_PAIRS.some(([x, y]) => (x === a && y === b) || (x === b && y === a));
 }
 
-// 選んだ縛りを整える（知らないもの・ぶつかるものを落として2つまで）
+// 選んだ縛りを整える（知らないもの・ぶつかるものを落として MAX_PICK まで）
 export function cleanRules(list) {
   const out = [];
   for (const id of Array.isArray(list) ? list : []) {
     if (typeof id !== 'string' || !RULE_IDS.includes(id)) continue;
-    if (out.length >= 2) break;
+    if (out.length >= MAX_PICK) break;
     if (out.every((x) => compatible(x, id))) out.push(id);
   }
   return out;

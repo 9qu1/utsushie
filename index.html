@@ -18,7 +18,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@500;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/style.css?v=0.3.0">
+<link rel="stylesheet" href="css/style.css?v=0.4.0">
 </head>
 <body data-phase="top">
 
@@ -74,6 +74,16 @@
     <div class="card">
       <div class="card-h">メンバー <span id="l-count" class="muted"></span></div>
       <ul id="l-players" class="players"></ul>
+    </div>
+    <div class="card host-only" id="l-bots">
+      <div class="card-h">🤖 テスト用ボット <span id="l-bots-n" class="muted"></span></div>
+      <div class="bot-btns">
+        <button id="bot-add" class="btn small" type="button">＋1人</button>
+        <button id="bot-fill" class="btn small" type="button">部屋を埋める（12人まで）</button>
+        <button id="bot-del" class="btn small ghost" type="button">−1人</button>
+        <button id="bot-clear" class="btn small ghost" type="button">全部外す</button>
+      </div>
+      <p class="calc">ひとりで試すとき用。ボットはお手本をまねして描き、似ている順に判定します（ボットごとにうまさがちがう）。あなたのこの画面を開いている間だけ動きます。</p>
     </div>
     <div class="card settings" id="l-settings"></div>
     <div class="start-area">
@@ -167,8 +177,8 @@
         <canvas id="j-model"></canvas>
         <div class="tag">お手本 <span id="j-model-name"></span></div>
       </div>
-      <div id="j-rules" class="rule-mini under"></div>
       <div class="j-right">
+        <div class="j-rules-row">この絵の縛り <span id="j-rules" class="rule-mini"></span></div>
         <p class="j-help">お手本に<b>似ている順</b>にタップ！（もう一度タップで取り消し・🔍で大きく）</p>
         <div id="j-grid" class="j-grid"></div>
         <div class="j-actions">
@@ -187,14 +197,13 @@
   <!-- 結果発表 -->
   <section id="s-reveal">
     <div class="draw-top">
-      <div class="d-left"><span class="d-no">結果発表</span><span id="r-no" class="muted"></span></div>
+      <div class="d-left"><span class="d-no">結果発表</span><span id="r-no" class="muted"></span><span id="r-rules" class="rule-mini"></span></div>
       <div id="r-judges" class="d-prog"></div>
     </div>
     <div class="r-main">
       <div class="r-model-box">
         <canvas id="r-model"></canvas>
         <div class="tag">お手本 <span id="r-name"></span></div>
-        <div id="r-rules" class="rule-mini under"></div>
       </div>
       <ol id="r-list" class="r-list"></ol>
     </div>
@@ -256,6 +265,6 @@
 <div id="band" class="band" hidden>📡 通信が切れました。つなぎ直し中…</div>
 <div id="toast" class="toast" hidden></div>
 
-<script type="module" src="js/app.js?v=0.3.0"></script>
+<script type="module" src="js/app.js?v=0.4.0"></script>
 </body>
 </html>

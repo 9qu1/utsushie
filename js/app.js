@@ -1,14 +1,15 @@
 // ウツシエ: 画面
 //   画面は「いまの state（サーバーから届く）」をそのまま描く。描きかけのキャンバスだけは手元で持つ
 //   書きかけ・押しかけを消さないよう、中身が変わったときだけ作り直す（毎回 innerHTML しない）
-import { NET, VERSION } from './net.js?v=0.3.0';
-import { Pad, SIZES, INK_MAX } from './pad.js?v=0.3.0';
-import { PALETTE, makeModel, renderModel, modelName } from './shared/models.js?v=0.3.0';
+import { NET, VERSION } from './net.js?v=0.4.0';
+import { Pad, SIZES, INK_MAX } from './pad.js?v=0.4.0';
+import { PALETTE, makeModel, renderModel, modelName } from './shared/models.js?v=0.4.0';
 import {
-  RULES, ruleOf, compatible, TIME_MIN, TIME_MAX, TIME_STEP, TIME_MARKS, cleanSec, fmtSec, MATCH_CHOICES, KINDS, PICKS, MIN_PLAYERS,
+  RULES, ruleOf, compatible, MAX_PICK, MAX_PLAYERS, TIME_MIN, TIME_MAX, TIME_STEP, TIME_MARKS, cleanSec, fmtSec, MATCH_CHOICES, KINDS, PICKS, MIN_PLAYERS,
   maxJudges, clampJudges, PEEK_SEC, GLANCE_TIMES, GLANCE_MS, MOVES_MAX,
-} from './shared/rules.js?v=0.3.0';
-import { sfx, isMute, setMute } from './sound.js?v=0.3.0';
+} from './shared/rules.js?v=0.4.0';
+import { sfx, isMute, setMute } from './sound.js?v=0.4.0';
+import { Bots } from './bots.js?v=0.4.0';
 
 const $ = (s) => document.querySelector(s);
 function el(tag, cls, text) {
@@ -57,6 +58,7 @@ function toast(msg, ms = 2600) {
 
 // ---------- 通信 ----------
 const sock = NET.create();
+const bots = new Bots({ onChange: () => renderBots() }); // テスト用ボット（下の「テスト用ボット」の欄）
 let S = null;          // いまの state
 let lastPhase = 'top';
 
@@ -91,6 +93,7 @@ $('#k-resume').onclick = () => { $('#kicked').hidden = true; sock.resume(); };
 
 function joined(code) {
   ss.set('us-room', code);
+  bots.restore(code);
   const u = new URL(location.href);
   if (u.searchParams.get('r') !== code) {
     u.searchParams.set('r', code);
@@ -99,6 +102,7 @@ function joined(code) {
 }
 
 function goTop() {
+  bots.clear(true);
   sock.close();
   ss.del('us-room');
   S = null;
@@ -221,7 +225,7 @@ function onState(st) {
 const MARK = { done: '✅', busy: '✏️', rest: '☕' };
 function renderPlayers(ul, { score = false, marks = false } = {}) {
   const list = S.players;
-  const sig = JSON.stringify(list.map((p) => [p.name, p.connected, p.isHost, p.you, score ? p.score : 0, marks ? p.mark : '']));
+  const sig = JSON.stringify(list.map((p) => [p.name, p.connected, p.isHost, p.you, p.bot, score ? p.score : 0, marks ? p.mark : '']));
   if (ul.dataset.sig === sig) return;
   ul.dataset.sig = sig;
   ul.textContent = '';
@@ -231,7 +235,8 @@ function renderPlayers(ul, { score = false, marks = false } = {}) {
     if (p.you) li.classList.add('you');
     if (!p.connected) li.classList.add('off');
     if (marks && p.mark) li.classList.add(`m-${p.mark}`);
-    li.append(`${p.isHost ? '👑 ' : ''}${marks && p.mark ? MARK[p.mark] + ' ' : ''}${p.name}${p.you ? '（あなた）' : ''}`);
+    if (p.bot) li.classList.add('bot');
+    li.append(`${p.isHost ? '👑 ' : ''}${marks && p.mark ? MARK[p.mark] + ' ' : ''}${p.bot ? '🤖' : ''}${p.name}${p.you ? '（あなた）' : ''}`);
     if (score) li.append(el('span', 'sc', `${p.score}点`));
     ul.append(li);
   }
@@ -253,7 +258,38 @@ function renderLobby() {
   if (N < MIN_PLAYERS) note.textContent = `あと${MIN_PLAYERS - N}人で始められます（${MIN_PLAYERS}〜12人）`;
   else note.textContent = S.you.isHost ? '' : 'ホストが はじめるのを待っています';
   $('#l-end').hidden = !setup;
+  renderBots();
 }
+
+// ---------- テスト用ボット ----------
+function botRoom() {
+  // まだ部屋に入っていない（返事待ちの）ボットも数える
+  const names = new Set((S ? S.players : []).map((p) => p.name));
+  const pending = bots.list.filter((b) => b.alive && !names.has(b.name)).length;
+  return { free: MAX_PLAYERS - (S ? S.players.length : 0) - pending };
+}
+function renderBots() {
+  if (!S || (S.phase !== 'lobby' && S.phase !== 'setup')) return;
+  const { free } = botRoom();
+  const inRoom = S.players.filter((p) => p.bot && p.connected).length;
+  $('#l-bots-n').textContent = bots.count ? `いま ${inRoom}人` : '';
+  $('#bot-add').disabled = free <= 0;
+  $('#bot-fill').disabled = free <= 0;
+  $('#bot-del').disabled = bots.count === 0;
+  $('#bot-clear').disabled = bots.count === 0;
+}
+$('#bot-add').onclick = () => {
+  if (!S || botRoom().free <= 0) return;
+  bots.add(S.code, S.players.map((p) => p.name));
+};
+$('#bot-fill').onclick = () => {
+  if (!S) return;
+  const { free } = botRoom();
+  for (let i = 0; i < free; i++) bots.add(S.code, S.players.map((p) => p.name));
+  if (free > 0) toast(`ボットを${free}人入れます`);
+};
+$('#bot-del').onclick = () => bots.removeOne();
+$('#bot-clear').onclick = () => bots.clear(true);
 
 function chip(label, on, onClick, disabled) {
   const b = el('button', `chip${on ? ' on' : ''}`, label);
@@ -313,13 +349,13 @@ function renderSettings(N) {
       b.type = 'button';
       b.append(el('span', '', r.icon), el('span', '', r.name));
       b.title = r.desc;
-      const canAdd = s.rules.length < 2 && s.rules.every((x) => compatible(x, r.id));
+      const canAdd = s.rules.length < MAX_PICK && s.rules.every((x) => compatible(x, r.id));
       if (!on && !canAdd) b.disabled = true;
       b.onclick = () => setSetup({ rules: on ? s.rules.filter((x) => x !== r.id) : s.rules.concat(r.id) });
       grid.append(b);
     }
     box.append(grid);
-    box.append(el('div', 'calc', '2つまで選べます（似た種類どうしは一緒に選べません）'));
+    box.append(el('div', 'calc', `${MAX_PICK}つまで選べます（似た種類どうしは一緒に選べません）`));
     box.append(el('div', 'calc', 'この試合のあいだ、ずっと同じ縛りで描きます'));
   } else if (s.pick === 'roulette') {
     box.append(el('div', 'calc', 'お題1枚ごとに、スロットがくるくる回って縛りが1〜2個決まる！'));
