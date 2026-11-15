@@ -2,8 +2,8 @@
 //   ・ふちをぼかさないので、塗りつぶしがぴったり効く／「何ピクセル塗ったか」がそのままインクの量になる
 //   ・縛り（rules.js の RULES）はここで効かせる: インク・色の数・筆・直線だけ・ドット絵・手数・一筆書き・手ぶれ・鏡
 //   ・できた絵は PNG（SIZE×SIZE）でサーバーに送る
-import { PALETTE } from './shared/models.js?v=0.2.0';
-import { INK_RATE, MOVES_MAX } from './shared/rules.js?v=0.2.0';
+import { PALETTE } from './shared/models.js?v=0.3.0';
+import { INK_RATE, MOVES_MAX } from './shared/rules.js?v=0.3.0';
 
 export const SIZE = 480;
 export const SIZES = [4, 10, 20, 40];   // 筆の太さ（直径ピクセル）

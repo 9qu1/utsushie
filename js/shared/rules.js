@@ -10,6 +10,11 @@
 
 export const MIN_PLAYERS = 3;
 export const MAX_PLAYERS = 12;
+// ルーレットの1回ぶん（1〜2個・一緒に選べる組・used に出たものは後まわし）
+export function rollRules(used, rnd = Math.random) {
+  return pickRules(rnd() < ROLL_TWO ? 2 : 1, used, rnd);
+}
+
 // 1枚の時間（秒）。目盛りで 10〜300秒を5秒きざみ（2026-11-16 ユーザー「メモリで10秒から300秒で選べるように」）
 export const TIME_MIN = 10;
 export const TIME_MAX = 300;
@@ -34,12 +39,17 @@ export const KINDS = [
   { id: 'illust', name: 'イラスト' },
   { id: 'shape', name: '図形' },
 ];
+// 縛りの決め方（2026-11-16 ユーザー「ラウンドごとにランダムで縛りが出る・スロットの演出でくるくるって1〜2個」）
+//   roulette … お題1枚ごとにスロットが回って 1〜2個（いちばんはじめ）
+//   none     … 縛りなし
+//   manual   … ホストが選んだ縛り（2つまで）を試合のあいだずっと
 export const PICKS = [
-  { id: 'auto1', name: 'おまかせ1つ' },
-  { id: 'auto2', name: 'おまかせ2つ' },
+  { id: 'roulette', name: '🎰 ルーレット（1枚ごと）' },
   { id: 'none', name: '縛りなし' },
-  { id: 'manual', name: '自分でえらぶ' },
+  { id: 'manual', name: '自分でえらぶ（試合ずっと）' },
 ];
+export const SPIN_MS = 3000;   // スロットが回っている時間（このあと 3・2・1）
+export const ROLL_TWO = 0.45;  // ルーレットで2個になる割合
 export const SPEED_SEC = 8;
 export const PEEK_SEC = 5;
 export const GLANCE_TIMES = 3;

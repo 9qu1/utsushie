@@ -43,6 +43,8 @@ export const sfx = {
   pop() { tone(520, 0.12, { type: 'sine', vol: 0.12, to: 900 }); },
   tap() { tone(1200, 0.05, { type: 'sine', vol: 0.06 }); },
   fanfare() { [523, 659, 784, 1047].forEach((f, k) => tone(f, k === 3 ? 0.5 : 0.14, { type: 'triangle', vol: 0.12, at: k * 0.11 })); },
+  reel() { tone(1050, 0.03, { type: 'square', vol: 0.025 }); },
+  ding() { tone(1568, 0.35, { type: 'triangle', vol: 0.12 }); tone(2093, 0.4, { type: 'sine', vol: 0.06, at: 0.02 }); },
   intro() { [392, 523, 659].forEach((f, k) => tone(f, 0.2, { type: 'triangle', vol: 0.1, at: k * 0.09 })); },
 };
 

@@ -18,7 +18,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@500;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/style.css?v=0.2.0">
+<link rel="stylesheet" href="css/style.css?v=0.3.0">
 </head>
 <body data-phase="top">
 
@@ -132,6 +132,18 @@
         <button id="d-done" class="btn primary">できた！</button>
       </div>
     </div>
+    <!-- ルーレット: 描く前にスロットが回って縛りが 1〜2個止まる -->
+    <div id="d-slot" class="slot-ov" hidden>
+      <div class="slot-card">
+        <div class="slot-title">🎰 この絵の縛りは…</div>
+        <div class="slot-reels">
+          <div class="reel" id="d-reel-0"><div class="strip"></div></div>
+          <div class="reel" id="d-reel-1"><div class="strip"></div></div>
+        </div>
+        <div id="d-slot-desc" class="slot-desc"></div>
+        <div id="d-slot-count" class="slot-count"></div>
+      </div>
+    </div>
     <!-- 描いたあと・休けい・観戦 -->
     <div id="d-side" class="d-side">
       <div id="d-side-msg" class="side-msg"></div>
@@ -155,6 +167,7 @@
         <canvas id="j-model"></canvas>
         <div class="tag">お手本 <span id="j-model-name"></span></div>
       </div>
+      <div id="j-rules" class="rule-mini under"></div>
       <div class="j-right">
         <p class="j-help">お手本に<b>似ている順</b>にタップ！（もう一度タップで取り消し・🔍で大きく）</p>
         <div id="j-grid" class="j-grid"></div>
@@ -181,6 +194,7 @@
       <div class="r-model-box">
         <canvas id="r-model"></canvas>
         <div class="tag">お手本 <span id="r-name"></span></div>
+        <div id="r-rules" class="rule-mini under"></div>
       </div>
       <ol id="r-list" class="r-list"></ol>
     </div>
@@ -242,6 +256,6 @@
 <div id="band" class="band" hidden>📡 通信が切れました。つなぎ直し中…</div>
 <div id="toast" class="toast" hidden></div>
 
-<script type="module" src="js/app.js?v=0.2.0"></script>
+<script type="module" src="js/app.js?v=0.3.0"></script>
 </body>
 </html>

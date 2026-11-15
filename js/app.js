@@ -1,14 +1,14 @@
 // ウツシエ: 画面
 //   画面は「いまの state（サーバーから届く）」をそのまま描く。描きかけのキャンバスだけは手元で持つ
 //   書きかけ・押しかけを消さないよう、中身が変わったときだけ作り直す（毎回 innerHTML しない）
-import { NET, VERSION } from './net.js?v=0.2.0';
-import { Pad, SIZES, INK_MAX } from './pad.js?v=0.2.0';
-import { PALETTE, makeModel, renderModel, modelName } from './shared/models.js?v=0.2.0';
+import { NET, VERSION } from './net.js?v=0.3.0';
+import { Pad, SIZES, INK_MAX } from './pad.js?v=0.3.0';
+import { PALETTE, makeModel, renderModel, modelName } from './shared/models.js?v=0.3.0';
 import {
   RULES, ruleOf, compatible, TIME_MIN, TIME_MAX, TIME_STEP, TIME_MARKS, cleanSec, fmtSec, MATCH_CHOICES, KINDS, PICKS, MIN_PLAYERS,
   maxJudges, clampJudges, PEEK_SEC, GLANCE_TIMES, GLANCE_MS, MOVES_MAX,
-} from './shared/rules.js?v=0.2.0';
-import { sfx, isMute, setMute } from './sound.js?v=0.2.0';
+} from './shared/rules.js?v=0.3.0';
+import { sfx, isMute, setMute } from './sound.js?v=0.3.0';
 
 const $ = (s) => document.querySelector(s);
 function el(tag, cls, text) {
@@ -213,7 +213,7 @@ function onState(st) {
     case 'final': renderFinal(prev !== 'final'); break;
     default:
   }
-  if (st.phase !== 'draw') hideZoomIf('draw');
+  if (st.phase !== 'draw') { hideZoomIf('draw'); stopSlot(); $('#d-slot').hidden = true; }
   if (st.phase !== 'judge') hideZoomIf('judge');
 }
 
@@ -320,8 +320,9 @@ function renderSettings(N) {
     }
     box.append(grid);
     box.append(el('div', 'calc', '2つまで選べます（似た種類どうしは一緒に選べません）'));
-  } else if (s.pick !== 'none') {
-    box.append(el('div', 'calc', 'どの縛りかは試合の始まりに発表！'));
+    box.append(el('div', 'calc', 'この試合のあいだ、ずっと同じ縛りで描きます'));
+  } else if (s.pick === 'roulette') {
+    box.append(el('div', 'calc', 'お題1枚ごとに、スロットがくるくる回って縛りが1〜2個決まる！'));
   }
 
   h('1枚の時間');
@@ -379,6 +380,7 @@ function timeSlider(s, host) {
   row.append(minus, track, plus);
   wrap.append(val, row);
   if ((s.rules || []).includes('speed') && s.pick === 'manual') wrap.append(el('div', 'calc', '縛り「8秒勝負」の試合は 8秒になります'));
+  if (s.pick === 'roulette') wrap.append(el('div', 'calc', 'ルーレットで「8秒勝負」が出たお題は 8秒になります'));
   paintRange(rng);
   return wrap;
 }
@@ -418,7 +420,11 @@ function renderIntro(enter) {
   if (box.dataset.sig !== sig) {
     box.dataset.sig = sig;
     box.textContent = '';
-    if (!g.rules.length) {
+    if (g.mode === 'roulette') {
+      const c = el('div', 'intro-rule');
+      c.append(el('div', 'ir-n', '🎰 縛りはルーレット！'), el('div', 'ir-d', 'お題1枚ごとに、スロットがくるくる回って縛りが1〜2個決まる'));
+      box.append(c);
+    } else if (!g.rules.length) {
       const c = el('div', 'intro-rule');
       c.append(el('div', 'ir-n', '🆓 縛りなし！'), el('div', 'ir-d', 'ふつうに、そっくりに描こう'));
       box.append(c);
@@ -442,6 +448,19 @@ function renderIntro(enter) {
     void bar.offsetWidth;
     bar.style.transition = `transform ${g.introMs}ms linear`;
     bar.style.transform = 'scaleX(0)';
+  }
+}
+
+// 縛りの小さな札を並べる
+function ruleTags(box, rules) {
+  box.textContent = '';
+  if (!rules || !rules.length) { box.append(el('span', '', '縛りなし')); return; }
+  for (const id of rules) {
+    const r = ruleOf(id);
+    if (!r) continue;
+    const t = el('span', '', `${r.icon}${r.name}`);
+    t.title = r.desc;
+    box.append(t);
   }
 }
 
@@ -584,8 +603,9 @@ function newSlot(g) {
   cur = {
     key, gid: g.id, slot: g.slot, image: g.image, rules: g.rules, sec: g.sec,
     localStart: 0, localEnd: 0, glanceLeft: GLANCE_TIMES, glanceUntil: 0,
-    sent: false, sending: false, lastCount: null, timeupDone: false, mineUrl: '', lastBeep: null,
+    sent: false, sending: false, lastCount: null, timeupDone: false, mineUrl: '', lastBeep: null, spinEnd: 0,
   };
+  stopSlot();
   // ほかの1枚の控えは消す
   for (const k of ss.keys()) if (k.startsWith('us-pad:') && k !== padKey()) ss.del(k);
   pad.reset();
@@ -601,10 +621,7 @@ function newSlot(g) {
   }
   paintModel($('#d-model'), g.image);
   paintModel($('#d-side-model'), g.image);
-  const rm = $('#d-rules');
-  rm.textContent = '';
-  if (!g.rules.length) rm.append(el('span', '', '縛りなし'));
-  for (const id of g.rules) { const r = ruleOf(id); rm.append(el('span', '', `${r.icon}${r.name}`)); }
+  ruleTags($('#d-rules'), g.rules);
   $('#d-glance').hidden = !g.rules.includes('glance');
   $('#d-side-mine').removeAttribute('src');
   layoutDraw();
@@ -623,6 +640,8 @@ function renderDraw() {
   const end = Date.now() + g.startInMs + g.remainMs;
   if (!cur.localEnd || Math.abs(cur.localEnd - end) > 400) cur.localEnd = end;
   cur.localStart = cur.localEnd - g.sec * 1000;
+  const se = Date.now() + (g.spinMs || 0);
+  if (!cur.spinEnd || (g.spinMs > 0 && Math.abs(cur.spinEnd - se) > 400)) cur.spinEnd = se;
   const mode = drawMode(g);
   const sec = $('#s-draw');
   sec.dataset.mode = mode;
@@ -638,6 +657,88 @@ function renderDraw() {
   // サーバーが「時間切れ」と言ったのにまだ出していない → 出す
   if (g.collecting && mode === 'draw') submitDrawing('timeup');
   drawTick(Date.now());
+}
+
+// ---------- ルーレット（スロット） ----------
+//   リールは2本。1本目はかならず縛り、2本目は縛りか「なし」（＝1〜2個）。1本目が先に止まる
+const REEL_H = 60;
+const NONE_ITEM = { id: '', icon: '🚫', name: 'なし', desc: '' };
+let slotFx = null; // { key, timers, landed }
+
+function reelItem(r) {
+  const d = el('div', 'ri');
+  d.append(el('span', 'ic', r.icon), el('span', 'nm', r.name));
+  return d;
+}
+
+function stopSlot() {
+  if (!slotFx) return;
+  slotFx.timers.forEach(clearTimeout);
+  slotFx = null;
+}
+
+function runSlot(g) {
+  const key = `${g.id}:${g.slot}`;
+  if (slotFx && slotFx.key === key) return;
+  stopSlot();
+  const results = [g.rules[0] ? ruleOf(g.rules[0]) : NONE_ITEM, g.rules[1] ? ruleOf(g.rules[1]) : NONE_ITEM];
+  const spin = Math.max(0, cur.spinEnd - Date.now());
+  const fx = { key, timers: [], landed: 0 };
+  slotFx = fx;
+  $('#d-slot-desc').textContent = '';
+  $('#d-slot-count').textContent = '';
+  const stops = [Math.max(0, spin - 900), spin];
+  [0, 1].forEach((k) => {
+    const reel = $(`#d-reel-${k}`);
+    const strip = reel.querySelector('.strip');
+    reel.classList.remove('hit', 'none');
+    strip.textContent = '';
+    strip.style.transition = 'none';
+    strip.style.transform = 'translateY(0)';
+    const pool = k === 0 ? RULES : RULES.concat([NONE_ITEM, NONE_ITEM, NONE_ITEM, NONE_ITEM]);
+    const n = stops[k] > 250 ? 22 + k * 8 : 0;
+    for (let i = 0; i < n; i++) strip.append(reelItem(pool[Math.floor(Math.random() * pool.length)]));
+    strip.append(reelItem(results[k]));
+    void strip.offsetHeight;
+    if (n) {
+      strip.style.transition = `transform ${stops[k]}ms cubic-bezier(.12,.72,.22,1)`;
+      strip.style.transform = `translateY(${-n * REEL_H}px)`;
+      fx.timers.push(setTimeout(() => land(fx, k, results, true), stops[k]));
+    } else {
+      land(fx, k, results, false);
+    }
+  });
+  // くるくるの音（だんだんゆっくり）
+  if (spin > 250) {
+    const t0 = Date.now();
+    const step = () => {
+      const e = Date.now() - t0;
+      if (slotFx !== fx || e >= spin - 120) return;
+      sfx.reel();
+      fx.timers.push(setTimeout(step, 45 + (e / spin) * 230));
+    };
+    step();
+  }
+}
+
+function land(fx, k, results, sound) {
+  if (slotFx !== fx) return;
+  const reel = $(`#d-reel-${k}`);
+  reel.classList.add('hit');
+  if (!results[k].id) reel.classList.add('none');
+  if (sound) sfx.ding();
+  fx.landed++;
+  if (fx.landed < 2) return;
+  // 2本とも止まった → 説明
+  const box = $('#d-slot-desc');
+  box.textContent = '';
+  const list = results.filter((r) => r.id);
+  for (const r of list) {
+    const d = el('div', 'sd');
+    d.append(el('b', '', `${r.icon} ${r.name}`), el('span', '', r.desc));
+    box.append(d);
+  }
+  if (sound && list.length === 2) sfx.fanfare();
 }
 
 async function submitDrawing(reason) {
@@ -679,9 +780,25 @@ function drawTick(now) {
   const toStart = cur.localStart - now;
   const left = cur.localEnd - now;
   const started = toStart <= 0;
+  // ルーレット（描く前）
+  const roulette = g.mode === 'roulette' && toStart > 0;
+  $('#d-slot').hidden = !roulette;
+  // 止まる前に、上の帯の縛りの札で結果がわからないように
+  $('#d-rules').style.visibility = g.mode === 'roulette' && now < cur.spinEnd ? 'hidden' : '';
+  if (roulette) {
+    runSlot(g);
+    const sc = $('#d-slot-count');
+    if (now < cur.spinEnd) sc.textContent = '';
+    else {
+      const n = Math.ceil(toStart / 1000);
+      sc.textContent = `${n}`;
+      if (cur.lastCount !== n) { cur.lastCount = n; if (mode === 'draw') sfx.count(); }
+    }
+  }
   // 3・2・1
   const cnt = $('#d-count');
-  if (toStart > 0) {
+  if (roulette) cnt.hidden = true;
+  else if (toStart > 0) {
     const n = Math.ceil(toStart / 1000);
     cnt.hidden = false;
     cnt.className = 'count';
@@ -775,6 +892,7 @@ function showTask(t) {
     J.shown = sig;
     paintModel($('#j-model'), t.image);
     $('#j-model-name').textContent = `（${modelName(t.image)}）`;
+    ruleTags($('#j-rules'), t.rules);
     const grid = $('#j-grid');
     grid.textContent = '';
     for (const id of t.arts) {
@@ -923,6 +1041,7 @@ function renderReveal() {
   revTimers = [];
   paintModel($('#r-model'), c.image);
   $('#r-name').textContent = `（${modelName(c.image)}）`;
+  ruleTags($('#r-rules'), c.rules);
   const ol = $('#r-list');
   ol.textContent = '';
   const items = [];
