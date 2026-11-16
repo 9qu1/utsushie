@@ -3,7 +3,7 @@
 //   色はキャンバスのパレットと同じ16色だけを使う（同じ色で描けるように）
 //   座標は 0〜100 の正方形。全体を少しずらす・大きさを変える・左右反転で、同じ絵でも毎回ちがう見た目に
 //   リアル（k: 'photo'）は形ではなく画像ファイル（shared/photos.js）。描くのは画面の model-view.js
-import { photoName } from './photos.js?v=0.6.0';
+import { photoName } from './photos.js?v=0.6.1';
 
 export const PALETTE = [
   { hex: '#222222', name: '黒' },

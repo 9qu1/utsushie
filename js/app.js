@@ -1,16 +1,16 @@
 // ウツシエ: 画面
 //   画面は「いまの state（サーバーから届く）」をそのまま描く。描きかけのキャンバスだけは手元で持つ
 //   書きかけ・押しかけを消さないよう、中身が変わったときだけ作り直す（毎回 innerHTML しない）
-import { NET, VERSION } from './net.js?v=0.6.0';
-import { Pad, SIZES, INK_MAX } from './pad.js?v=0.6.0';
-import { PALETTE, modelName } from './shared/models.js?v=0.6.0';
-import { paintModel as paintModelTo, setOwnUrl } from './model-view.js?v=0.6.0';
+import { NET, VERSION } from './net.js?v=0.6.1';
+import { Pad, SIZES, INK_MAX } from './pad.js?v=0.6.1';
+import { PALETTE, modelName } from './shared/models.js?v=0.6.1';
+import { paintModel as paintModelTo, setOwnUrl } from './model-view.js?v=0.6.1';
 import {
   RULES, ruleOf, compatible, MAX_PICK, MAX_PLAYERS, TIME_MIN, TIME_MAX, TIME_STEP, TIME_MARKS, cleanSec, fmtSec, MATCH_CHOICES, KINDS, PICKS, MIN_PLAYERS,
   maxJudges, clampJudges, PEEK_SEC, GLANCE_TIMES, GLANCE_MS, MOVES_MAX,
-} from './shared/rules.js?v=0.6.0';
-import { sfx, isMute, setMute } from './sound.js?v=0.6.0';
-import { Bots } from './bots.js?v=0.6.0';
+} from './shared/rules.js?v=0.6.1';
+import { sfx, isMute, setMute } from './sound.js?v=0.6.1';
+import { Bots } from './bots.js?v=0.6.1';
 
 const $ = (s) => document.querySelector(s);
 function el(tag, cls, text) {
@@ -257,7 +257,7 @@ function renderLobby() {
   start.textContent = setup ? `第${S.matchNo + 1}試合をはじめる` : 'ゲームをはじめる';
   start.disabled = N < MIN_PLAYERS;
   const note = $('#l-start-note');
-  if (N < MIN_PLAYERS) note.textContent = `あと${MIN_PLAYERS - N}人で始められます（${MIN_PLAYERS}〜12人）`;
+  if (N < MIN_PLAYERS) note.textContent = `あと${MIN_PLAYERS - N}人で始められます（${MIN_PLAYERS}〜${MAX_PLAYERS}人）`;
   else note.textContent = S.you.isHost ? '' : 'ホストが はじめるのを待っています';
   $('#l-end').hidden = !setup;
   if (S.setup.kind === 'own' && !S.ownN && N >= MIN_PLAYERS) {

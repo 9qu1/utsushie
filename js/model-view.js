@@ -1,8 +1,8 @@
 // ウツシエ: お手本をキャンバスに描く（イラスト・図形は形から／リアル・持ち込みは画像ファイルから）
 //   画像は読み込みに少しかかるので、一度読んだものは取っておく
 //   持ち込み（k: 'own'）は部屋の通信先から取る。どこから取るかは画面が setOwnUrl で教える
-import { makeModel, renderModel } from './shared/models.js?v=0.6.0';
-import { photoPath } from './shared/photos.js?v=0.6.0';
+import { makeModel, renderModel } from './shared/models.js?v=0.6.1';
+import { photoPath } from './shared/photos.js?v=0.6.1';
 
 const cache = new Map(); // 'p:番号' / 'o:id' → Promise<HTMLImageElement>
 let ownUrl = (id) => '';

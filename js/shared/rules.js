@@ -9,7 +9,7 @@
 // 点数: 判定する人1人の並べ方ごとに 1位 3点・2位 2点・3位 1点（最下位はいつも 0点）
 
 export const MIN_PLAYERS = 3;
-export const MAX_PLAYERS = 12;
+export const MAX_PLAYERS = 20; // 2026-11-17 ユーザー「20人まで入れるようにして」（もとは12）
 // ルーレットの1回ぶん（1〜2個・一緒に選べる組・used に出たものは後まわし）
 export function rollRules(used, rnd = Math.random) {
   return pickRules(rnd() < ROLL_TWO ? 2 : 1, used, rnd);
