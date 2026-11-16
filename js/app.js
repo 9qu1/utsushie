@@ -1,16 +1,16 @@
 // ウツシエ: 画面
 //   画面は「いまの state（サーバーから届く）」をそのまま描く。描きかけのキャンバスだけは手元で持つ
 //   書きかけ・押しかけを消さないよう、中身が変わったときだけ作り直す（毎回 innerHTML しない）
-import { NET, VERSION } from './net.js?v=0.5.0';
-import { Pad, SIZES, INK_MAX } from './pad.js?v=0.5.0';
-import { PALETTE, modelName } from './shared/models.js?v=0.5.0';
-import { paintModel as paintModelTo } from './model-view.js?v=0.5.0';
+import { NET, VERSION } from './net.js?v=0.6.0';
+import { Pad, SIZES, INK_MAX } from './pad.js?v=0.6.0';
+import { PALETTE, modelName } from './shared/models.js?v=0.6.0';
+import { paintModel as paintModelTo, setOwnUrl } from './model-view.js?v=0.6.0';
 import {
   RULES, ruleOf, compatible, MAX_PICK, MAX_PLAYERS, TIME_MIN, TIME_MAX, TIME_STEP, TIME_MARKS, cleanSec, fmtSec, MATCH_CHOICES, KINDS, PICKS, MIN_PLAYERS,
   maxJudges, clampJudges, PEEK_SEC, GLANCE_TIMES, GLANCE_MS, MOVES_MAX,
-} from './shared/rules.js?v=0.5.0';
-import { sfx, isMute, setMute } from './sound.js?v=0.5.0';
-import { Bots } from './bots.js?v=0.5.0';
+} from './shared/rules.js?v=0.6.0';
+import { sfx, isMute, setMute } from './sound.js?v=0.6.0';
+import { Bots } from './bots.js?v=0.6.0';
 
 const $ = (s) => document.querySelector(s);
 function el(tag, cls, text) {
@@ -59,6 +59,7 @@ function toast(msg, ms = 2600) {
 
 // ---------- 通信 ----------
 const sock = NET.create();
+setOwnUrl((id) => sock.ownUrl(id)); // 持ち込みお手本は部屋の通信先から
 const bots = new Bots({ onChange: () => renderBots() }); // テスト用ボット（下の「テスト用ボット」の欄）
 let S = null;          // いまの state
 let lastPhase = 'top';
@@ -259,8 +260,139 @@ function renderLobby() {
   if (N < MIN_PLAYERS) note.textContent = `あと${MIN_PLAYERS - N}人で始められます（${MIN_PLAYERS}〜12人）`;
   else note.textContent = S.you.isHost ? '' : 'ホストが はじめるのを待っています';
   $('#l-end').hidden = !setup;
+  if (S.setup.kind === 'own' && !S.ownN && N >= MIN_PLAYERS) {
+    note.textContent = S.you.isHost ? '持ち込みの画像を追加してね' : 'ホストが画像を用意しています';
+    start.disabled = true;
+  }
+  renderOwn(N);
   renderBots();
 }
+
+// ---------- 持ち込みお手本 ----------
+//   2026-11-16 ユーザー「キャラの画像で友達だけで遊びたい」→ サイトには置かず、ホストが自分の画像を部屋に出す
+//   「まとめて画像追加」「同じ部屋でもう1回」→ まとめて選べる・部屋がなくなるまで残る（もう一度あそぶでも使える）
+//   画像はここで 600×600 の正方形（白地に収める）の JPEG にしてから送る。一覧はホストにだけ届く
+const OWN_PX = 600;
+let ownBusy = null; // { done, total, fail }
+function renderOwn(N) {
+  const card = $('#l-own');
+  const on = S.setup.kind === 'own';
+  card.hidden = !on;
+  if (!on) return;
+  const n = S.ownN || 0;
+  const max = S.ownMax || 60;
+  $('#l-own-n').textContent = `${n}枚`;
+  const per = Math.max(N, MIN_PLAYERS);
+  const tips = [];
+  if (S.you.isHost) {
+    tips.push(`スマホやパソコンの画像を、まとめて選べます（${max}枚まで）。この部屋にいる人にだけ見えて、サイトには置きません。部屋がなくなると消えます`);
+    if (n && n < per) tips.push(`1試合でお手本を${per}枚使うので、同じ画像が2回出ることがあります`);
+    else if (n) tips.push(`ひととおり出るまで同じ画像は出ません（何試合でも・もう一度あそぶでも使えます）`);
+  } else {
+    tips.push(n ? `ホストが用意した画像 ${n}枚 からお手本が出ます` : 'ホストが画像を用意しています');
+  }
+  $('#own-note').textContent = tips.join('。') + '。';
+  const busy = $('#own-busy');
+  busy.hidden = !ownBusy;
+  if (ownBusy) busy.textContent = `画像を送っています… ${ownBusy.done}/${ownBusy.total}`;
+  $('#own-add').disabled = !!ownBusy || n >= max;
+  $('#own-clear').disabled = !!ownBusy || n === 0;
+  const grid = $('#own-grid');
+  const list = S.you.isHost ? S.own || [] : [];
+  const sig = list.map((o) => o.id).join(',');
+  if (grid.dataset.sig === sig) return;
+  grid.dataset.sig = sig;
+  grid.textContent = '';
+  for (const o of list) {
+    const d = el('div', 'own-th');
+    const im = el('img');
+    im.src = sock.ownUrl(o.id);
+    im.alt = o.name || '';
+    im.loading = 'lazy';
+    const x = el('button', 'x', '✕');
+    x.type = 'button';
+    x.title = 'この画像を消す';
+    x.onclick = () => sock.emit('ownDel', { id: o.id });
+    d.append(im);
+    if (o.name) d.append(el('div', 'nm', o.name));
+    d.append(x);
+    grid.append(d);
+  }
+}
+
+// 画像を 600×600 の正方形に収めた JPEG に（透明なところは白）
+async function ownBlob(file) {
+  let src = null;
+  try { src = await createImageBitmap(file); } catch (e) {
+    src = await new Promise((res, rej) => {
+      const im = new Image();
+      const u = URL.createObjectURL(file);
+      im.onload = () => { URL.revokeObjectURL(u); res(im); };
+      im.onerror = () => { URL.revokeObjectURL(u); rej(new Error('read')); };
+      im.src = u;
+    });
+  }
+  const w = src.width, h = src.height;
+  if (!w || !h) throw new Error('size');
+  const c = document.createElement('canvas');
+  c.width = c.height = OWN_PX;
+  const x = c.getContext('2d');
+  x.fillStyle = '#fff';
+  x.fillRect(0, 0, OWN_PX, OWN_PX);
+  const pad = 16;
+  const k = Math.min((OWN_PX - pad * 2) / w, (OWN_PX - pad * 2) / h);
+  x.imageSmoothingQuality = 'high';
+  x.drawImage(src, (OWN_PX - w * k) / 2, (OWN_PX - h * k) / 2, w * k, h * k);
+  if (src.close) src.close();
+  for (const q of [0.86, 0.75, 0.6]) {
+    const b = await new Promise((r) => c.toBlob(r, 'image/jpeg', q));
+    if (b && b.size < 380 * 1024) return b;
+  }
+  throw new Error('big');
+}
+// ファイル名 → お手本の名前（IMG_1234 のような名前は使わない）
+function ownName(file) {
+  const base = String(file.name || '').replace(/\.[a-z0-9]+$/i, '').replace(/[_\s]+/g, ' ').trim();
+  if (!base || /^(img|image|images|dsc|dscn|pxl|photo|screenshot|download|ダウンロード|スクリーンショット|名称未設定)[\s\-().:0-9]*$/i.test(base) || /^[\d\s\-()]+$/.test(base) || /^[0-9a-f\-]{16,}$/i.test(base)) return '';
+  return base.slice(0, 20);
+}
+async function addOwn(files) {
+  const room = (S.ownMax || 60) - (S.ownN || 0);
+  const list = [...files].filter((f) => /^image\//.test(f.type) || /\.(jpe?g|png|webp|gif|heic|heif|avif|bmp)$/i.test(f.name)).slice(0, Math.max(0, room));
+  if (!list.length) { toast(room <= 0 ? `画像は${S.ownMax || 60}枚までです` : '画像をえらんでね'); return; }
+  ownBusy = { done: 0, total: list.length, fail: 0 };
+  renderOwn(S.players.filter((p) => p.connected).length);
+  let err = '';
+  const queue = list.slice();
+  await Promise.all([0, 1, 2].map(async () => {
+    while (queue.length) {
+      const f = queue.shift();
+      try {
+        const blob = await ownBlob(f);
+        const r = await sock.uploadOwn({ blob, pid: PID, tok: S.you.tok, name: ownName(f) });
+        if (!r.ok) { ownBusy.fail++; err = r.err || err; if (r.status === 409 || r.status === 429 || r.status === 403) queue.length = 0; }
+      } catch (e) { ownBusy.fail++; }
+      ownBusy.done++;
+      if (S) renderOwn(S.players.filter((p) => p.connected).length);
+    }
+  }));
+  const { total, fail } = ownBusy;
+  ownBusy = null;
+  if (S) renderLobby();
+  const over = files.length - list.length;
+  toast((fail ? `${total - fail}枚 追加しました（${fail}枚は追加できませんでした${err ? `：${err}` : ''}）` : `${total}枚 追加しました`)
+    + (over > 0 ? `。${S ? S.ownMax || 60 : 60}枚までなので、${over}枚は追加していません` : ''), 4000);
+}
+$('#own-add').onclick = () => $('#own-file').click();
+$('#own-file').onchange = (e) => {
+  const files = [...(e.target.files || [])];
+  e.target.value = '';
+  if (files.length && S && S.you.isHost) addOwn(files);
+};
+$('#own-clear').onclick = () => {
+  if (!S || !S.ownN) return;
+  if (window.confirm(`持ち込みの画像 ${S.ownN}枚 を全部消しますか？`)) sock.emit('ownDel', { all: true });
+};
 
 // ---------- テスト用ボット ----------
 function botRoom() {
@@ -372,6 +504,7 @@ function renderSettings(N) {
   const kc = el('div', 'chips');
   for (const k of KINDS) kc.append(chip(k.name, s.kind === k.id, () => setSetup({ kind: k.id })));
   box.append(kc);
+  if (s.kind === 'own') box.append(el('div', 'calc', 'ホストが持ち込んだ画像がお手本になります（下の「持ち込みお手本」で追加）'));
   if (!host) box.append(el('div', 'calc', '設定を変えられるのはホスト（👑）だけです'));
 }
 

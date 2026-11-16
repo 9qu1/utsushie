@@ -173,6 +173,15 @@ input:focus { border-color: var(--teal); }
 .step b { font-size: 22px; min-width: 2ch; text-align: center; }
 .calc { font-size: 13px; color: var(--muted); margin-top: 6px; }
 .calc b { color: var(--ink); }
+/* 持ち込みお手本 */
+.own-btns { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 10px; }
+.own-busy { font-size: 14px; font-weight: 700; margin-bottom: 8px; }
+.own-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(64px, 1fr)); gap: 6px; }
+.own-grid:empty { display: none; }
+.own-th { position: relative; aspect-ratio: 1; border: 2px solid var(--line); border-radius: 8px; overflow: hidden; background: #fff; }
+.own-th img { width: 100%; height: 100%; object-fit: contain; display: block; }
+.own-th .x { position: absolute; top: 2px; right: 2px; width: 22px; height: 22px; border-radius: 50%; border: 2px solid var(--line); background: #fff; font-size: 12px; line-height: 1; padding: 0; cursor: pointer; }
+.own-th .nm { position: absolute; left: 0; right: 0; bottom: 0; font-size: 10px; background: rgba(255,255,255,.85); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding: 0 3px; }
 .start-area { max-width: 560px; margin: 0 auto; display: grid; gap: 10px; }
 .bot-btns { display: flex; flex-wrap: wrap; gap: 8px; }
 .players li.bot { background: #EEF3FF; }

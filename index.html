@@ -18,7 +18,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@500;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/style.css?v=0.5.0">
+<link rel="stylesheet" href="css/style.css?v=0.6.0">
 </head>
 <body data-phase="top">
 
@@ -93,6 +93,18 @@
       <p class="calc">ひとりで試すとき用。ボットはお手本をまねして描き、似ている順に判定します（ボットごとにうまさがちがう）。あなたのこの画面を開いている間だけ動きます。</p>
     </div>
     <div class="card settings" id="l-settings"></div>
+    <!-- 持ち込みお手本（お手本の絵で「持ち込み」を選んだとき） -->
+    <div class="card own-card" id="l-own" hidden>
+      <div class="card-h">🖼️ 持ち込みお手本 <span id="l-own-n" class="muted"></span></div>
+      <div class="host-only own-btns">
+        <button id="own-add" class="btn primary small" type="button">画像を追加（まとめて選べる）</button>
+        <button id="own-clear" class="btn small ghost" type="button">全部消す</button>
+        <input id="own-file" type="file" accept="image/*" multiple hidden>
+      </div>
+      <div id="own-busy" class="own-busy" hidden></div>
+      <div id="own-grid" class="own-grid host-only"></div>
+      <p id="own-note" class="calc"></p>
+    </div>
     <div class="start-area">
       <button id="l-start" class="btn primary big host-only">はじめる</button>
       <div id="l-start-note" class="note"></div>
@@ -272,6 +284,6 @@
 <div id="band" class="band" hidden>📡 通信が切れました。つなぎ直し中…</div>
 <div id="toast" class="toast" hidden></div>
 
-<script type="module" src="js/app.js?v=0.5.0"></script>
+<script type="module" src="js/app.js?v=0.6.0"></script>
 </body>
 </html>

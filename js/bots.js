@@ -4,9 +4,9 @@
 //   ・判定: 絵を小さくしてお手本と色の差をくらべ、似ている順に並べる（うまくないボットほど迷う）
 //   ・サーバーには join のときに bot: true を送る（名前の横に🤖・ホストは渡さない）
 //   ・読み込み直しても続くよう、ボットの pid と名前を sessionStorage に控える
-import { NET } from './net.js?v=0.5.0';
-import { PALETTE, makeModel, renderModel } from './shared/models.js?v=0.5.0';
-import { loadPhoto } from './model-view.js?v=0.5.0';
+import { NET } from './net.js?v=0.6.0';
+import { PALETTE, makeModel, renderModel } from './shared/models.js?v=0.6.0';
+import { loadPicture, isPicture } from './model-view.js?v=0.6.0';
 
 const SIZE = 480;
 const BASE_NAME = 'ボット';
@@ -33,7 +33,7 @@ export function botPicture(image, skill, rules = []) {
   if (has('peek') || has('glance') || has('blind')) k += 0.3;
   if (['speed', 'shake', 'mirror', 'one', 'moves', 'line', 'fat'].some(has)) k += 0.15;
   k = Math.min(1, k);
-  if (image && image.k === 'photo') return photoPicture(image, skill, k, has);
+  if (isPicture(image)) return photoPicture(image, skill, k, has); // リアル・持ち込み
   const m = makeModel(image);
   const j = (a) => (Math.random() - 0.5) * 2 * k * a;
   const prims = [];
@@ -79,7 +79,7 @@ function nearest(r, g, b, allowed) {
   return best;
 }
 async function photoPicture(image, skill, k, has) {
-  const im = await loadPhoto(image.i);
+  const im = await loadPicture(image);
   const lo = has('pixel') ? 16 : Math.round(18 + skill * 40);
   const small = canvas(lo);
   const sx = small.getContext('2d', { willReadFrequently: true });
@@ -151,7 +151,7 @@ function loadImage(url) {
 
 // 似ている順（色の差の小さい順）。うまくないボットほどゆらぐ
 async function rankBySimilarity(task, skill, artUrl) {
-  const photo = task.image && task.image.k === 'photo' ? await loadPhoto(task.image.i).catch(() => null) : null;
+  const photo = isPicture(task.image) ? await loadPicture(task.image).catch(() => null) : null;
   const model = pixels((x, n) => (photo ? x.drawImage(photo, 0, 0, n, n) : renderModel(x, makeModel(task.image), n)));
   const scored = await Promise.all(task.arts.map(async (id) => {
     try {

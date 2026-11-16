@@ -1,28 +1,41 @@
-// ウツシエ: お手本をキャンバスに描く（イラスト・図形は形から／リアルは画像ファイルから）
-//   リアルの画像は読み込みに少しかかるので、一度読んだものは取っておく
-import { makeModel, renderModel } from './shared/models.js?v=0.5.0';
-import { photoPath } from './shared/photos.js?v=0.5.0';
+// ウツシエ: お手本をキャンバスに描く（イラスト・図形は形から／リアル・持ち込みは画像ファイルから）
+//   画像は読み込みに少しかかるので、一度読んだものは取っておく
+//   持ち込み（k: 'own'）は部屋の通信先から取る。どこから取るかは画面が setOwnUrl で教える
+import { makeModel, renderModel } from './shared/models.js?v=0.6.0';
+import { photoPath } from './shared/photos.js?v=0.6.0';
 
-const photos = new Map(); // 番号 → Promise<HTMLImageElement>
+const cache = new Map(); // 'p:番号' / 'o:id' → Promise<HTMLImageElement>
+let ownUrl = (id) => '';
+export function setOwnUrl(fn) { ownUrl = fn; }
 
-export function loadPhoto(i) {
-  if (!photos.has(i)) {
+// 画像のお手本か（リアル・持ち込み）
+export const isPicture = (image) => !!image && (image.k === 'photo' || image.k === 'own');
+
+function load(key, url, cors) {
+  if (!cache.has(key)) {
     const p = new Promise((res, rej) => {
       const im = new Image();
+      if (cors) im.crossOrigin = 'anonymous'; // 通信先は別の住所。ボットが色を読めるように
       im.decoding = 'async';
       im.onload = () => res(im);
-      im.onerror = () => { photos.delete(i); rej(new Error(`photo ${i}`)); };
-      im.src = photoPath(i);
+      im.onerror = () => { cache.delete(key); rej(new Error(key)); };
+      im.src = url;
     });
-    photos.set(i, p);
+    cache.set(key, p);
   }
-  return photos.get(i);
+  return cache.get(key);
+}
+export const loadPhoto = (i) => load(`p:${i}`, photoPath(i), false);
+// お手本の画像（リアル・持ち込み）
+export function loadPicture(image) {
+  if (image && image.k === 'own') return load(`o:${image.id}`, ownUrl(image.id), true);
+  return loadPhoto(image.i);
 }
 
-// ctx に size×size でお手本を描く（リアルは読みおわってから）
+// ctx に size×size でお手本を描く（画像は読みおわってから）
 export async function drawModel(ctx, image, size) {
-  if (image && image.k === 'photo') {
-    const im = await loadPhoto(image.i);
+  if (isPicture(image)) {
+    const im = await loadPicture(image);
     ctx.drawImage(im, 0, 0, size, size);
     return;
   }
@@ -35,10 +48,10 @@ export function paintModel(canvas, image, px) {
   const key = JSON.stringify(image);
   canvas.dataset.model = key;
   const ctx = canvas.getContext('2d');
-  if (!image || image.k !== 'photo') { renderModel(ctx, makeModel(image), px); return Promise.resolve(); }
+  if (!isPicture(image)) { renderModel(ctx, makeModel(image), px); return Promise.resolve(); }
   ctx.fillStyle = '#fff';
   ctx.fillRect(0, 0, px, px);
-  return loadPhoto(image.i).then((im) => {
+  return loadPicture(image).then((im) => {
     if (canvas.dataset.model === key) ctx.drawImage(im, 0, 0, px, px);
   }, () => {
     // 読めなかったら、少しおいてもう一度

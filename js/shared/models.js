@@ -3,7 +3,7 @@
 //   色はキャンバスのパレットと同じ16色だけを使う（同じ色で描けるように）
 //   座標は 0〜100 の正方形。全体を少しずらす・大きさを変える・左右反転で、同じ絵でも毎回ちがう見た目に
 //   リアル（k: 'photo'）は形ではなく画像ファイル（shared/photos.js）。描くのは画面の model-view.js
-import { photoName } from './photos.js?v=0.5.0';
+import { photoName } from './photos.js?v=0.6.0';
 
 export const PALETTE = [
   { hex: '#222222', name: '黒' },
@@ -396,7 +396,7 @@ export function makeModel(m) {
 }
 
 // お手本の名前（リアル＝写真のような絵は shared/photos.js の一覧から）
-export const modelName = (m) => (m && m.k === 'illust' ? illustName(m.i) : m && m.k === 'photo' ? photoName(m.i) : '図形');
+export const modelName = (m) => (m && m.k === 'illust' ? illustName(m.i) : m && m.k === 'photo' ? photoName(m.i) : m && m.k === 'own' ? m.name || '持ち込み' : '図形');
 
 const rad = (d) => (d * Math.PI) / 180;
 

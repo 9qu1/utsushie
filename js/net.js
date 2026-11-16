@@ -9,7 +9,7 @@
 //   ・切断が1.5秒続いたら帯を出す（すぐ戻る切断ではちらつかせない）・state が届いたら「つながりました！」
 //   ・つながっていないときの操作は送らずに知らせる（送信待ちのまま入り直す前に届いて、黙って無視されるため）
 //   ・別のタブ・別の端末に席を取られたら、自動で取り返さずに選んでもらう（2画面が取り合わないように）
-export const VERSION = '0.5.0'; // src/version.js と同じにする
+export const VERSION = '0.6.0'; // src/version.js と同じにする
 export const NET = {};
 {
   const PROD = ['9qu1.com', '9qu1.github.io'].includes(location.hostname);
@@ -271,6 +271,28 @@ export const NET = {};
         }
       },
       artUrl(id) { return `${ORIGIN}/api/art?r=${encodeURIComponent(code)}&id=${encodeURIComponent(id)}`; },
+      // 持ち込みお手本（ホストだけ送れる）。{ ok, id, n } か { ok:false, err }
+      async uploadOwn({ blob, pid, tok, name }) {
+        const ctl = new AbortController();
+        const timer = setTimeout(() => ctl.abort(), 20000);
+        try {
+          const res = await fetch(`${ORIGIN}/api/own?r=${encodeURIComponent(code)}&name=${encodeURIComponent(name || '')}`, {
+            method: 'POST',
+            headers: { 'content-type': blob.type || 'image/jpeg', 'x-pid': pid, 'x-tok': tok },
+            body: blob,
+            signal: ctl.signal,
+          });
+          let j = {};
+          try { j = await res.json(); } catch (e) { /* 中身なし */ }
+          if (!res.ok || !j.ok) return { ok: false, err: j.err || `画像を送れなかったよ（${res.status}）`, status: res.status };
+          return j;
+        } catch (e) {
+          return { ok: false, err: '📡 画像を送れなかったよ', net: true };
+        } finally {
+          clearTimeout(timer);
+        }
+      },
+      ownUrl(id) { return `${ORIGIN}/api/own?r=${encodeURIComponent(code)}&id=${encodeURIComponent(id)}`; },
       // 部屋を作る（HTTP。返事のコードの部屋に open する）
       async createRoom(data) {
         const ctl = new AbortController();
