@@ -9,7 +9,7 @@
 //   ・切断が1.5秒続いたら帯を出す（すぐ戻る切断ではちらつかせない）・state が届いたら「つながりました！」
 //   ・つながっていないときの操作は送らずに知らせる（送信待ちのまま入り直す前に届いて、黙って無視されるため）
 //   ・別のタブ・別の端末に席を取られたら、自動で取り返さずに選んでもらう（2画面が取り合わないように）
-export const VERSION = '0.4.1'; // src/version.js と同じにする
+export const VERSION = '0.5.0'; // src/version.js と同じにする
 export const NET = {};
 {
   const PROD = ['9qu1.com', '9qu1.github.io'].includes(location.hostname);

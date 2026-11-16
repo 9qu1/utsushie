@@ -1,15 +1,16 @@
 // ウツシエ: 画面
 //   画面は「いまの state（サーバーから届く）」をそのまま描く。描きかけのキャンバスだけは手元で持つ
 //   書きかけ・押しかけを消さないよう、中身が変わったときだけ作り直す（毎回 innerHTML しない）
-import { NET, VERSION } from './net.js?v=0.4.1';
-import { Pad, SIZES, INK_MAX } from './pad.js?v=0.4.1';
-import { PALETTE, makeModel, renderModel, modelName } from './shared/models.js?v=0.4.1';
+import { NET, VERSION } from './net.js?v=0.5.0';
+import { Pad, SIZES, INK_MAX } from './pad.js?v=0.5.0';
+import { PALETTE, modelName } from './shared/models.js?v=0.5.0';
+import { paintModel as paintModelTo } from './model-view.js?v=0.5.0';
 import {
   RULES, ruleOf, compatible, MAX_PICK, MAX_PLAYERS, TIME_MIN, TIME_MAX, TIME_STEP, TIME_MARKS, cleanSec, fmtSec, MATCH_CHOICES, KINDS, PICKS, MIN_PLAYERS,
   maxJudges, clampJudges, PEEK_SEC, GLANCE_TIMES, GLANCE_MS, MOVES_MAX,
-} from './shared/rules.js?v=0.4.1';
-import { sfx, isMute, setMute } from './sound.js?v=0.4.1';
-import { Bots } from './bots.js?v=0.4.1';
+} from './shared/rules.js?v=0.5.0';
+import { sfx, isMute, setMute } from './sound.js?v=0.5.0';
+import { Bots } from './bots.js?v=0.5.0';
 
 const $ = (s) => document.querySelector(s);
 function el(tag, cls, text) {
@@ -633,8 +634,7 @@ window.addEventListener('resize', () => { if (S && S.phase === 'draw') layoutDra
 
 const MODEL_PX = 600;
 function paintModel(canvas, image) {
-  if (canvas.width !== MODEL_PX) { canvas.width = MODEL_PX; canvas.height = MODEL_PX; }
-  renderModel(canvas.getContext('2d'), makeModel(image), MODEL_PX);
+  paintModelTo(canvas, image, MODEL_PX); // リアル（画像）は読みおわってから描かれる
 }
 
 function newSlot(g) {
@@ -1184,6 +1184,22 @@ function renderFinal(enter) {
   if (enter) sfx.fanfare();
 }
 $('#f-again').onclick = () => sock.emit('again');
+
+// ---------- あそびかたのプレイ動画 ----------
+//   2026-11-16 ユーザー「遊び方のところに音無しの動画（GIFみたい）な感じでプレイ動画を垂れ流す」
+//   音なし・くり返し。見えている間だけ流す（見えるまでは読み込まない）。動きを減らす設定なら止めたまま（押せば流れる）
+{
+  const v = $('#howto-video');
+  if (v) {
+    v.muted = true;
+    const calm = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const go = () => { v.preload = 'auto'; v.play().catch(() => {}); };
+    if (calm) v.controls = true;
+    else if ('IntersectionObserver' in window) {
+      new IntersectionObserver((es) => { for (const e of es) { if (e.isIntersecting) go(); else v.pause(); } }, { rootMargin: '150px 0px' }).observe(v);
+    } else go();
+  }
+}
 
 // ---------- 時計 ----------
 setInterval(() => {

@@ -18,7 +18,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@500;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/style.css?v=0.4.1">
+<link rel="stylesheet" href="css/style.css?v=0.5.0">
 </head>
 <body data-phase="top">
 
@@ -52,6 +52,12 @@
     </div>
     <div class="card howto">
       <h2>あそびかた</h2>
+      <div class="howto-body">
+      <figure class="howto-video">
+        <video id="howto-video" muted loop playsinline preload="none" poster="howto/play.jpg" width="480" height="960" aria-label="プレイのようす（音なし・くり返し）">
+          <source src="howto/play.mp4" type="video/mp4">
+        </video>
+      </figure>
       <ol>
         <li><b>お手本の絵</b>をみんなで同時にまねして描く（1枚ずつ）</li>
         <li>試合ごとに<b>縛り</b>がある（インク少なめ・直線だけ・5秒だけ見える…）</li>
@@ -59,6 +65,7 @@
         <li>全部描いたら<b>まとめて判定</b>。似ている順に並べる</li>
         <li><b>1位 3点・2位 2点・3位 1点</b>。合計がいちばん多い人が優勝！</li>
       </ol>
+      </div>
       <p class="small">3〜12人で遊べます。スマホでもパソコンでもOK。登録なし・無料。</p>
     </div>
     <footer class="foot"><a href="https://9qu1.com/" target="_blank" rel="noopener">くぁくぁのつくったもの（ほかのゲーム）</a></footer>
@@ -265,6 +272,6 @@
 <div id="band" class="band" hidden>📡 通信が切れました。つなぎ直し中…</div>
 <div id="toast" class="toast" hidden></div>
 
-<script type="module" src="js/app.js?v=0.4.1"></script>
+<script type="module" src="js/app.js?v=0.5.0"></script>
 </body>
 </html>

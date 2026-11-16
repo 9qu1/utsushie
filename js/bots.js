@@ -4,8 +4,9 @@
 //   ・判定: 絵を小さくしてお手本と色の差をくらべ、似ている順に並べる（うまくないボットほど迷う）
 //   ・サーバーには join のときに bot: true を送る（名前の横に🤖・ホストは渡さない）
 //   ・読み込み直しても続くよう、ボットの pid と名前を sessionStorage に控える
-import { NET } from './net.js?v=0.4.1';
-import { PALETTE, makeModel, renderModel } from './shared/models.js?v=0.4.1';
+import { NET } from './net.js?v=0.5.0';
+import { PALETTE, makeModel, renderModel } from './shared/models.js?v=0.5.0';
+import { loadPhoto } from './model-view.js?v=0.5.0';
 
 const SIZE = 480;
 const BASE_NAME = 'ボット';
@@ -28,11 +29,12 @@ function canvas(n) {
 const BLACK = 0, WHITE = 2;
 export function botPicture(image, skill, rules = []) {
   const has = (id) => rules.includes(id);
-  const m = makeModel(image);
   let k = 1 - skill;
   if (has('peek') || has('glance') || has('blind')) k += 0.3;
   if (['speed', 'shake', 'mirror', 'one', 'moves', 'line', 'fat'].some(has)) k += 0.15;
   k = Math.min(1, k);
+  if (image && image.k === 'photo') return photoPicture(image, skill, k, has);
+  const m = makeModel(image);
   const j = (a) => (Math.random() - 0.5) * 2 * k * a;
   const prims = [];
   for (const p of m.prims) {
@@ -65,6 +67,68 @@ export function botPicture(image, skill, rules = []) {
   return new Promise((res) => big.toBlob((b) => res(b), 'image/png'));
 }
 
+// リアル（写真のような絵）のまね: 粗いマスに縮めて、パレットの16色に寄せる（ずれ・描き忘れ・色まちがいつき）
+const RGB = PALETTE.map((p) => [1, 3, 5].map((o) => parseInt(p.hex.slice(o, o + 2), 16)));
+function nearest(r, g, b, allowed) {
+  let best = allowed[0], bd = Infinity;
+  for (const i of allowed) {
+    const [R, G, B] = RGB[i];
+    const d = (r - R) ** 2 * 0.3 + (g - G) ** 2 * 0.59 + (b - B) ** 2 * 0.11;
+    if (d < bd) { bd = d; best = i; }
+  }
+  return best;
+}
+async function photoPicture(image, skill, k, has) {
+  const im = await loadPhoto(image.i);
+  const lo = has('pixel') ? 16 : Math.round(18 + skill * 40);
+  const small = canvas(lo);
+  const sx = small.getContext('2d', { willReadFrequently: true });
+  sx.fillStyle = '#fff';
+  sx.fillRect(0, 0, lo, lo);
+  const sc = 1 + (Math.random() - 0.5) * 0.3 * k;
+  const ox = (Math.random() - 0.5) * 0.16 * k * lo, oy = (Math.random() - 0.5) * 0.16 * k * lo;
+  sx.drawImage(im, ox + (lo - lo * sc) / 2, oy + (lo - lo * sc) / 2, lo * sc, lo * sc);
+  const d = sx.getImageData(0, 0, lo, lo);
+  const px = d.data;
+  // まずは16色（黒一色なら黒と白）に寄せる
+  let allowed = has('mono') ? [BLACK, WHITE] : PALETTE.map((_, i) => i);
+  const idx = new Array(lo * lo);
+  for (let i = 0; i < idx.length; i++) idx[i] = nearest(px[i * 4], px[i * 4 + 1], px[i * 4 + 2], allowed);
+  const count = new Map();
+  for (const c of idx) count.set(c, (count.get(c) || 0) + 1);
+  const byUse = [...count.entries()].sort((a, b) => b[1] - a[1]).map(([c]) => c);
+  if (has('col2')) {
+    // よく使う2色（白はのぞく）に寄せなおす
+    allowed = byUse.filter((c) => c !== WHITE).slice(0, 2).concat(WHITE);
+    for (let i = 0; i < idx.length; i++) idx[i] = nearest(px[i * 4], px[i * 4 + 1], px[i * 4 + 2], allowed);
+  }
+  // 色をまちがえる（うまくないほど）
+  const swap = new Map();
+  for (const c of byUse) if (c !== WHITE && Math.random() < k * 0.25) swap.set(c, allowed[Math.floor(Math.random() * allowed.length)]);
+  // インク少なめ → いちばん広い色（たいてい背景）はぬらない
+  const back = has('ink') ? byUse[0] : -1;
+  for (let i = 0; i < idx.length; i++) {
+    let c = idx[i];
+    if (c === back) c = WHITE;
+    else if (swap.has(c)) c = swap.get(c);
+    const [r, g, b] = RGB[c];
+    px[i * 4] = r; px[i * 4 + 1] = g; px[i * 4 + 2] = b; px[i * 4 + 3] = 255;
+  }
+  // 描き忘れ（白い四角の穴）
+  const holes = Math.round(k * 4 * Math.random());
+  for (let h = 0; h < holes; h++) {
+    const w = Math.max(2, Math.round(lo * (0.1 + Math.random() * 0.2)));
+    const x0 = Math.floor(Math.random() * (lo - w)), y0 = Math.floor(Math.random() * (lo - w));
+    for (let y = y0; y < y0 + w; y++) for (let x = x0; x < x0 + w; x++) { const i = (y * lo + x) * 4; px[i] = px[i + 1] = px[i + 2] = 255; }
+  }
+  sx.putImageData(d, 0, 0);
+  const big = canvas(SIZE);
+  const bx = big.getContext('2d');
+  bx.imageSmoothingEnabled = false;
+  bx.drawImage(small, 0, 0, SIZE, SIZE);
+  return new Promise((res) => big.toBlob((b) => res(b), 'image/png'));
+}
+
 // 小さくした絵の色の並び
 function pixels(draw, n = 40) {
   const c = canvas(n);
@@ -87,7 +151,8 @@ function loadImage(url) {
 
 // 似ている順（色の差の小さい順）。うまくないボットほどゆらぐ
 async function rankBySimilarity(task, skill, artUrl) {
-  const model = pixels((x, n) => renderModel(x, makeModel(task.image), n));
+  const photo = task.image && task.image.k === 'photo' ? await loadPhoto(task.image.i).catch(() => null) : null;
+  const model = pixels((x, n) => (photo ? x.drawImage(photo, 0, 0, n, n) : renderModel(x, makeModel(task.image), n)));
   const scored = await Promise.all(task.arts.map(async (id) => {
     try {
       const im = await loadImage(artUrl(id));

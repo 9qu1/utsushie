@@ -125,6 +125,14 @@ input:focus { border-color: var(--teal); }
 .howto h2 { font-size: 18px; margin: 0 0 8px; }
 .howto ol { margin: 0; padding-left: 1.4em; line-height: 1.75; font-weight: 500; }
 .howto b { font-weight: 800; }
+/* プレイ動画（音なし・くり返し）。スマホは上に、広い画面は左に並べる */
+.howto-body { display: grid; gap: 14px; }
+.howto-video { margin: 0 auto; width: min(230px, 62%); }
+.howto-video video { display: block; width: 100%; height: auto; aspect-ratio: 1 / 2; border: 3px solid var(--line); border-radius: 18px; box-shadow: var(--shadow); background: var(--bg); }
+@media (min-width: 560px) {
+  .howto-body { grid-template-columns: 200px 1fr; align-items: center; gap: 18px; }
+  .howto-video { width: 100%; }
+}
 .foot { text-align: center; margin: 18px 0 6px; font-size: 13px; }
 .foot a { color: var(--muted); }
 
