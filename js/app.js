@@ -1,16 +1,16 @@
 // ウツシエ: 画面
 //   画面は「いまの state（サーバーから届く）」をそのまま描く。描きかけのキャンバスだけは手元で持つ
 //   書きかけ・押しかけを消さないよう、中身が変わったときだけ作り直す（毎回 innerHTML しない）
-import { NET, VERSION } from './net.js?v=0.6.1';
-import { Pad, SIZES, INK_MAX } from './pad.js?v=0.6.1';
-import { PALETTE, modelName } from './shared/models.js?v=0.6.1';
-import { paintModel as paintModelTo, setOwnUrl } from './model-view.js?v=0.6.1';
+import { NET, VERSION } from './net.js?v=0.6.2';
+import { Pad, SIZES, INK_MAX } from './pad.js?v=0.6.2';
+import { PALETTE, modelName } from './shared/models.js?v=0.6.2';
+import { paintModel as paintModelTo, setOwnUrl } from './model-view.js?v=0.6.2';
 import {
   RULES, ruleOf, compatible, MAX_PICK, MAX_PLAYERS, TIME_MIN, TIME_MAX, TIME_STEP, TIME_MARKS, cleanSec, fmtSec, MATCH_CHOICES, KINDS, PICKS, MIN_PLAYERS,
   maxJudges, clampJudges, PEEK_SEC, GLANCE_TIMES, GLANCE_MS, MOVES_MAX,
-} from './shared/rules.js?v=0.6.1';
-import { sfx, isMute, setMute } from './sound.js?v=0.6.1';
-import { Bots } from './bots.js?v=0.6.1';
+} from './shared/rules.js?v=0.6.2';
+import { sfx, isMute, setMute } from './sound.js?v=0.6.2';
+import { Bots } from './bots.js?v=0.6.2';
 
 const $ = (s) => document.querySelector(s);
 function el(tag, cls, text) {
@@ -280,7 +280,7 @@ function renderOwn(N) {
   card.hidden = !on;
   if (!on) return;
   const n = S.ownN || 0;
-  const max = S.ownMax || 60;
+  const max = S.ownMax || 200;
   $('#l-own-n').textContent = `${n}枚`;
   const per = Math.max(N, MIN_PLAYERS);
   const tips = [];
@@ -357,9 +357,9 @@ function ownName(file) {
   return base.slice(0, 20);
 }
 async function addOwn(files) {
-  const room = (S.ownMax || 60) - (S.ownN || 0);
+  const room = (S.ownMax || 200) - (S.ownN || 0);
   const list = [...files].filter((f) => /^image\//.test(f.type) || /\.(jpe?g|png|webp|gif|heic|heif|avif|bmp)$/i.test(f.name)).slice(0, Math.max(0, room));
-  if (!list.length) { toast(room <= 0 ? `画像は${S.ownMax || 60}枚までです` : '画像をえらんでね'); return; }
+  if (!list.length) { toast(room <= 0 ? `画像は${S.ownMax || 200}枚までです` : '画像をえらんでね'); return; }
   ownBusy = { done: 0, total: list.length, fail: 0 };
   renderOwn(S.players.filter((p) => p.connected).length);
   let err = '';
@@ -381,7 +381,7 @@ async function addOwn(files) {
   if (S) renderLobby();
   const over = files.length - list.length;
   toast((fail ? `${total - fail}枚 追加しました（${fail}枚は追加できませんでした${err ? `：${err}` : ''}）` : `${total}枚 追加しました`)
-    + (over > 0 ? `。${S ? S.ownMax || 60 : 60}枚までなので、${over}枚は追加していません` : ''), 4000);
+    + (over > 0 ? `。${S ? S.ownMax || 200 : 200}枚までなので、${over}枚は追加していません` : ''), 4000);
 }
 $('#own-add').onclick = () => $('#own-file').click();
 $('#own-file').onchange = (e) => {
